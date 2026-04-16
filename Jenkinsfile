@@ -2,60 +2,60 @@ pipeline {
     agent any
 
     tools {
-    // Change this line to match the exact name in your Jenkins settings
-    maven 'Maven' 
-}
+        // Ensure this name matches exactly what you have in 
+        // Manage Jenkins -> Global Tool Configuration
+        maven 'Maven' 
+    }
 
     stages {
         stage('Checkout') {
             steps {
-                // Pulls your code from the Git repository
+                // Pulls your code from GitHub
                 checkout scm
             }
         }
 
         stage('Clean') {
             steps {
-                // Removes old build artifacts to ensure a fresh start
-                sh 'mvn clean'
+                // Deletes the target folder for a fresh build
+                bat 'mvn clean'
             }
         }
 
         stage('Compile') {
             steps {
-                // Checks for syntax errors in your App.java
-                sh 'mvn compile'
+                // Checks for syntax errors in App.java
+                bat 'mvn compile'
             }
         }
 
         stage('Test') {
             steps {
-                // Runs AppTest.java and generates a report
-                // If a test fails, the pipeline stops here (turns Red)
-                sh 'mvn test'
+                // Runs AppTest.java and checks your add/subtract logic
+                bat 'mvn test'
             }
         }
 
         stage('Package') {
             steps {
-                // Creates the final .jar file in the target/ folder
-                sh 'mvn package -DskipTests'
+                // Creates the final .jar file in the target folder
+                bat 'mvn package -DskipTests'
             }
         }
     }
 
     post {
         always {
-            // This archives the test results in Jenkins so you can view them in the UI
+            // Displays your test results in the Jenkins UI
             junit '**/target/surefire-reports/*.xml'
         }
         success {
-            echo 'The build and tests passed successfully!'
-            // This saves the .jar file so you can download it from the Jenkins dashboard
+            echo 'Build Successful! Artifact is ready.'
+            // Saves the .jar file so you can download it from Jenkins
             archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
         }
         failure {
-            echo 'Build failed. Please check the unit tests or syntax errors.'
+            echo 'The build failed. Check the Console Output or Test Reports.'
         }
     }
 }
