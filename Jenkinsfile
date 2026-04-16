@@ -47,7 +47,7 @@ pipeline {
                 script {
                     // This requires a credential in Jenkins with ID 'docker-hub-creds'
                     // Type: Username with Password
-                    withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
+                    withCredentials([usernamePassword(credentialsId: 'dockerhubid', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
                         bat "docker login"
                         bat "docker push ${DOCKER_USER}/${IMAGE_NAME}:${IMAGE_TAG}"
                         bat "docker push ${DOCKER_USER}/${IMAGE_NAME}:latest"
