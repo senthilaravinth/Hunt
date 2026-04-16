@@ -8,7 +8,7 @@ pipeline {
 
     environment {
         // Replace with your Docker Hub username
-        DOCKER_USER = "senthilaravinth"
+        DOCKER_USER = "23mis0086"
         IMAGE_NAME = "calculator-app"
         IMAGE_TAG = "${env.BUILD_NUMBER}"
     }
