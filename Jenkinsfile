@@ -2,12 +2,10 @@ pipeline {
     agent any
 
     tools {
-        // Ensure this name matches Manage Jenkins -> Tools
         maven 'Maven' 
     }
 
     environment {
-        // Replace with your Docker Hub username
         DOCKER_USER = "23mis0086"
         IMAGE_NAME = "calculator-app"
         IMAGE_TAG = "${env.BUILD_NUMBER}"
@@ -22,35 +20,40 @@ pipeline {
 
         stage('Maven Build & Test') {
             steps {
-                // Compile and run your AppTest.java logic
                 bat 'mvn clean test'
             }
         }
 
-        stage('Maven Package') {
-            steps {
-                // Create the .jar file
-                bat 'mvn package -DskipTests'
-            }
-        }
-
-        stage('Docker Build') {
-            steps {
-                // Build the image using the Dockerfile in your root folder
-                bat "docker build -t ${DOCKER_USER}/${IMAGE_NAME}:${IMAGE_TAG} ."
-                bat "docker build -t ${DOCKER_USER}/${IMAGE_NAME}:latest ."
-            }
-        }
-
-        stage('Docker Push') {
+        stage('Docker Build & Push') {
             steps {
                 script {
-                    // This requires a credential in Jenkins with ID 'docker-hub-creds'
-                    // Type: Username with Password
-                    withCredentials([usernamePassword(credentialsId: 'dockerhubid', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
+                    withCredentials([usernamePassword(credentialsId: 'dockerhubId', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
+                        // Build images
+                        bat "docker build -t %DOCKER_USER%/%IMAGE_NAME%:%IMAGE_TAG% ."
+                        bat "docker build -t %DOCKER_USER%/%IMAGE_NAME%:latest ."
+                        
+                        // Login and Push
                         bat "docker login"
-                        bat "docker push ${DOCKER_USER}/${IMAGE_NAME}:${IMAGE_TAG}"
-                        bat "docker push ${DOCKER_USER}/${IMAGE_NAME}:latest"
+                        bat "docker push %DOCKER_USER%/%IMAGE_NAME%:%IMAGE_TAG%"
+                        bat "docker push %DOCKER_USER%/%IMAGE_NAME%:latest"
+                    }
+                }
+            }
+        }
+
+        stage('Kubernetes Deploy') {
+            steps {
+                script {
+                    // This uses the 'kubeconfig' file credential you created in Jenkins
+                    withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_PATH')]) {
+                        // 1. Apply the deployment configuration
+                        bat "kubectl --kubeconfig=%KUBECONFIG_PATH% apply -f deployment.yaml"
+                        
+                        // 2. Force the deployment to use the new image we just pushed
+                        bat "kubectl --kubeconfig=%KUBECONFIG_PATH% set image deployment/calculator-deployment calculator=%DOCKER_USER%/%IMAGE_NAME%:%IMAGE_TAG%"
+                        
+                        // 3. Verify the rollout status
+                        bat "kubectl --kubeconfig=%KUBECONFIG_PATH% rollout status deployment/calculator-deployment"
                     }
                 }
             }
@@ -62,10 +65,10 @@ pipeline {
             junit '**/target/surefire-reports/*.xml'
         }
         success {
-            echo "Build and Image Push Successful! Version: ${IMAGE_TAG}"
+            echo "Successfully deployed version ${IMAGE_TAG} to Kubernetes!"
         }
         failure {
-            echo "Build failed. Check the Jenkins console logs for errors."
+            echo "Pipeline failed. Check the logs for Maven, Docker, or Kubectl errors."
         }
     }
 }
