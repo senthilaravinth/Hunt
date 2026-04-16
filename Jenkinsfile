@@ -27,7 +27,7 @@ pipeline {
         stage('Docker Build & Push') {
             steps {
                 script {
-                    withCredentials([usernamePassword(credentialsId: 'dockerhubId', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
+                    withCredentials([usernamePassword(credentialsId: 'dockerhubid', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
                         // Build images
                         bat "docker build -t %DOCKER_USER%/%IMAGE_NAME%:%IMAGE_TAG% ."
                         bat "docker build -t %DOCKER_USER%/%IMAGE_NAME%:latest ."
