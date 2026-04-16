@@ -27,7 +27,7 @@ pipeline {
         stage('Docker Build & Push') {
             steps {
                 script {
-                    withCredentials([usernamePassword(credentialsId: 'dockerhubid', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
+                    withCredentials([usernamePassword(credentialsId: '', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
                         // Build images
                         bat "docker build -t %DOCKER_USER%/%IMAGE_NAME%:%IMAGE_TAG% ."
                         bat "docker build -t %DOCKER_USER%/%IMAGE_NAME%:latest ."
@@ -42,22 +42,19 @@ pipeline {
         }
 
         stage('Kubernetes Deploy') {
-            steps {
-                script {
-                    // This uses the 'kubeconfig' file credential you created in Jenkins
-                    withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_PATH')]) {
-                        // 1. Apply the deployment configuration
-                        bat "kubectl --kubeconfig=%KUBECONFIG_PATH% apply -f deployment.yaml"
-                        
-                        // 2. Force the deployment to use the new image we just pushed
-                        bat "kubectl --kubeconfig=%KUBECONFIG_PATH% set image deployment/calculator-deployment calculator=%DOCKER_USER%/%IMAGE_NAME%:%IMAGE_TAG%"
-                        
-                        // 3. Verify the rollout status
-                        bat "kubectl --kubeconfig=%KUBECONFIG_PATH% rollout status deployment/calculator-deployment"
-                    }
-                }
+    steps {
+        script {
+            withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_PATH')]) {
+                // Wrap the variable in double quotes "" to handle the space in "Mvn pipe"
+                bat 'kubectl apply --kubeconfig="%KUBECONFIG_PATH%" -f deployment.yaml'
+                
+                bat 'kubectl set image deployment/calculator-deployment calculator=%DOCKER_USER%/%IMAGE_NAME%:%IMAGE_TAG% --kubeconfig="%KUBECONFIG_PATH%"'
+                
+                bat 'kubectl rollout status deployment/calculator-deployment --kubeconfig="%KUBECONFIG_PATH%"'
             }
         }
+    }
+}
     }
 
     post {
